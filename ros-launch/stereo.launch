@@ -1,0 +1,12 @@
+<launch>
+<group ns="/stereo" >
+<node pkg="camera1394" type="camera1394_node" name="left" > 
+ <param name="guid" value="000b09d017643567" />
+ <param name="video_mode" value="640x480_mono8" />
+ <param name="use_ros_time" value="True" />
+ <param name="frame_id" value="camera" />
+ <param name="camera_info_url" value="/home/krishneel/catkin_ws/src/usb_camera_stream/ibuf_cam_calib/cal.yml" />
+ <remap from="camera" to="left" />
+ </node>
+ </group>
+</launch>

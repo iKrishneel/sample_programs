@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+project( region_grow )
+find_package( OpenCV REQUIRED )
+add_executable( rgrow rgrow.c )
+target_link_libraries( rgrow ${OpenCV_LIBS} )

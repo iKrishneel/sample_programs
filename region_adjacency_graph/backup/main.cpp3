@@ -1,0 +1,359 @@
+
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/tuple/tuple.hpp>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include <boost/config.hpp>
+#include <iostream>
+#include <vector>
+#include <string>
+
+using namespace std;
+using namespace cv;
+
+
+class RAG {
+   
+#define THRESHOLD (0.5)
+   
+ private:
+    typedef boost::property<boost::vertex_index_t, int> VertexProperty;
+    typedef boost::property<boost::edge_weight_t, float> EdgeProperty;
+
+    //  the graph structure
+    boost::adjacency_list <boost::vecS,
+                           boost::vecS,
+                           boost::undirectedS,
+                           VertexProperty,
+                           EdgeProperty> graph;
+   
+    //  prototype for edge descriptor
+    typedef typename boost::graph_traits<
+       boost::adjacency_list<boost::vecS,
+                             boost::vecS,
+                             boost::undirectedS,
+                             VertexProperty,
+                             EdgeProperty>
+       >::edge_descriptor EdgeDescriptor;
+
+    // prototype to handle the edge values
+    typedef typename boost::property_traits<boost::property_map<
+       boost::adjacency_list<boost::vecS,
+                             boost::vecS,
+                             boost::undirectedS,
+                             VertexProperty,
+                             EdgeProperty>,
+       boost::edge_weight_t>::const_type>::value_type EdgeValue;
+
+    void concatenateRegion(
+       const cv::Mat &,
+       const cv::Point2i &,
+       cv::Mat &);
+   
+   
+   
+ public:
+   // RAG();
+
+   
+    void generateRAG(
+       const Mat &,
+       const Mat &);
+   
+    bool mergeRegionRAG(
+       const std::vector<cv::Mat> &,
+       const Mat &);
+};
+
+void RAG::generateRAG(
+    const Mat &neigbours,
+    const Mat &centroids) {
+    if (neigbours.empty() || centroids.empty()) {
+       std::cout << "Error" << std::endl;
+       return;
+    }
+    if (neigbours.rows == centroids.rows) {
+       int icounter = 0;
+       for (int j = 0; j < neigbours.rows; j++) {
+          int c_index = static_cast<int>(neigbours.at<uchar>(j, 0));
+          add_vertex(c_index, this->graph);
+          for (int i = 0; i < neigbours.cols; i++) {
+             int n_index = static_cast<int>(neigbours.at<uchar>(j, i));
+             // add_vertex(n_index, this->graph);
+             float distance = 0.0f;  // get weight function
+             add_edge(c_index, n_index, EdgeProperty(distance), this->graph);
+          }
+       }
+    }
+}
+
+
+bool RAG::mergeRegionRAG(
+    const vector<cv::Mat> &patches,
+    const Mat &centroids) {
+    if (num_vertices(this->graph) == 0 || patches.empty()) {
+       std::cout << "ERROR: Empty Graph" << std::endl;
+       return false;
+    }
+    boost::graph_traits<boost::adjacency_list<boost::vecS,
+                                              boost::vecS,
+                                              boost::undirectedS,
+                                              VertexProperty,
+                                              EdgeProperty>
+                        >::vertex_iterator vIter_begin, vIter_end;
+     boost::graph_traits<boost::adjacency_list<boost::vecS,
+                                               boost::vecS,
+                                               boost::undirectedS,
+                                               VertexProperty,
+                                               EdgeProperty>
+                         >::adjacency_iterator aIter_begin, aIter_end;
+     boost::property_map<boost::adjacency_list<boost::vecS,
+                                               boost::vecS,
+                                               boost::undirectedS,
+                                               VertexProperty,
+                                               EdgeProperty>,
+                         boost::vertex_index_t >::type
+     vertex_index_map = get(boost::vertex_index, this->graph);
+     EdgeDescriptor e_descriptor;
+
+     cv::Mat segmented_image = Mat(480, 640, CV_8UC3);
+     
+    for (tie(vIter_begin, vIter_end) = vertices(this->graph);
+        vIter_begin != vIter_end; ++vIter_begin) {
+       tie(aIter_begin, aIter_end) = adjacent_vertices(
+          *vIter_begin, this->graph);
+       for (; aIter_begin != aIter_end; ++aIter_begin) {
+          bool found;
+          tie(e_descriptor, found) = edge(
+             *vIter_begin, *aIter_begin, this->graph);
+          if (found) {
+             EdgeValue edge_val = boost::get(
+                boost::edge_weight, this->graph, e_descriptor);
+             float e_weights = edge_val;
+             if (e_weights > THRESHOLD) {
+                // merge the regions
+             }
+          }
+       }
+    }
+}
+
+
+/**
+ * function to merge the 2 given node and the corresponding regions
+ */
+void RAG::concatenateRegion(
+    const cv::Mat &n_region,
+    const cv::Point2i &centroids,
+    cv::Mat &out_img) {
+    int x_off = centroids.x - n_region.cols/2;
+    int y_off = centroids.y - n_region.rows/2;
+    for (int j = 0; j < n_region.rows; j++) {
+       for (int i = 0; i < n_region.cols; i++) {
+          out_img.at<cv::Vec3b>(y_off + j, x_off + i) =
+             n_region.at<cv::Vec3b>(j, i);
+       }
+    }
+}
+
+
+
+// ---------------------------------------------------------------------------------
+// struct vertex_property {
+//     int vertex_index;
+// };
+// struct edge_property(const float ef) {
+//     float edge_distance = ef;
+//     };
+
+typedef boost::property<boost::vertex_index_t, int> vertex_property;
+typedef boost::property<boost::edge_weight_t, float> edge_property;
+
+void boostSampleGraph() {
+
+    enum family {
+      Jeanie, Debbie, Rick, John, Amanda, Margaret, Benjamin, N };
+    const char *name[] = { "Jeanie", "Debbie", "Rick", "John", "Amanda",
+                           "Margaret", "Benjamin", "N"
+     };
+
+    /* actual graph structure  */
+    boost::adjacency_list <boost::vecS,
+                           boost::vecS,
+                           boost::undirectedS,
+                           vertex_property,
+                           edge_property> graph;
+
+     /* add vertices to the graph  */
+     add_vertex(Jeanie, graph);
+     add_vertex(Debbie, graph);
+     add_vertex(Rick, graph);
+     add_vertex(John, graph);
+     add_vertex(Amanda, graph);
+     add_vertex(Margaret, graph);
+     add_vertex(Benjamin, graph);
+     // add_vertex(N, graph);
+     
+     /* add edges to the vertices in the graph*/
+     add_edge(Jeanie, Debbie, edge_property(0.5f), graph);
+     add_edge(Jeanie, Rick, edge_property(0.2f), graph);
+     add_edge(Jeanie, John, edge_property(0.1f), graph);
+     add_edge(Debbie, Amanda, edge_property(0.3f), graph);
+     add_edge(Rick, Margaret, edge_property(0.4f), graph);
+     add_edge(John, Benjamin, edge_property(0.6f), graph);
+     // add_edge(Benjamin, N, edge_property(0.7f), graph);
+
+     
+     /* vertex iterator */
+     boost::graph_traits < boost::adjacency_list <boost::vecS,
+                                                  boost::vecS,
+                                                  boost::undirectedS,
+                                                  vertex_property,
+                                                  edge_property>
+                           >::vertex_iterator i, end;
+     boost::graph_traits < boost::adjacency_list <boost::vecS,
+                                                  boost::vecS,
+                                                  boost::undirectedS,
+                                                  vertex_property,
+                                                  edge_property>
+                           >::adjacency_iterator ai, a_end;
+
+     /* gets the graph vertex index */
+     boost::property_map < boost::adjacency_list <boost::vecS,
+                                                  boost::vecS,
+                                                  boost::undirectedS,
+                                                  vertex_property,
+                                                  edge_property>,
+                           boost::vertex_index_t >::type
+        index_map = get(boost::vertex_index, graph);
+
+
+
+     
+        /* container to hold the edge descriptor info */
+     typedef typename boost::graph_traits<
+        boost::adjacency_list<boost::vecS,
+                              boost::vecS,
+                              boost::undirectedS,
+                              vertex_property,
+                              edge_property>
+        >::edge_descriptor EdgeDescriptor;
+     EdgeDescriptor e_descriptor;
+             
+
+        
+        typedef typename boost::property_map<
+              boost::adjacency_list<boost::vecS,
+                                    boost::vecS,
+                                    boost::undirectedS,
+                                    vertex_property,
+                                    edge_property>,
+              boost::edge_weight_t
+              >::type EdgePropertyAccess;
+        EdgePropertyAccess edge_weights = get(boost::edge_weight, graph);
+
+        
+        
+        typedef typename boost::property_traits<boost::property_map<
+           boost::adjacency_list<boost::vecS,
+                                 boost::vecS,
+                                 boost::undirectedS,
+                                 vertex_property,
+                                 edge_property>,
+           boost::edge_weight_t>::const_type>::value_type EdgeValue;
+
+
+
+        float edge_size = num_vertices(graph);
+        std::cout << "# of Edges: " << edge_size  << std::endl;
+        
+        /* iterator throught the graph  */
+        for (tie(i, end) = vertices(graph); i != end; ++i) {
+           std::cout << name[get(index_map, *i)];
+           tie(ai, a_end) = adjacent_vertices(*i, graph);
+
+           std::cout <<"\nI: " <<  *end << std::endl;
+           
+              if (ai == a_end) {
+                 // std::cout << " has no children";
+              } else {
+                 // std::cout << " is the parent of ";
+              }
+              for (; ai != a_end; ++ai) {
+                 bool found;
+                 tie(e_descriptor, found) = edge(*i, *ai, graph);
+                 float weights_ = 0.0f;
+                 if (found) {
+                    EdgeValue edge_val = boost::get(boost::edge_weight, graph, e_descriptor);
+                    weights_ = edge_val;
+                 }
+                 std::cout  << "\t" << weights_ << " ";
+                 
+                 std::cout << name[get(index_map, *ai)];
+                 if (boost::next(ai) != a_end) {
+                    std::cout << ", ";
+                 }
+              }
+        std::cout << std::endl;
+     }
+
+}
+
+
+/**
+ * 
+ */
+int main(int argc, const char *argv[]) {
+
+    // boostSampleGraph();
+    // exit(-1);
+   
+   
+    cv::Mat image = cv::Mat::zeros(480, 640, CV_8UC3);
+    Rect rect = Rect(64, 96, 256, 96);
+    rectangle(image, rect, Scalar(0, 255, 0), -1);
+
+    
+    int width = 64;
+    int height = 48;
+    
+    vector<Mat> patches;
+    int _num_element = (image.rows/height) * (image.cols/width);
+    Mat centroid = Mat(_num_element, 2, CV_32F);
+
+    int y = 0;
+    for (int j = 0; j < image.rows; j += height) {
+       for (int i = 0; i < image.cols; i += width) {
+          Rect_<float> _rect = Rect_<float>(i, j, width, height);
+          if (_rect.x + _rect.width <= image.cols &&
+              _rect.y + _rect.height <= image.rows) {
+             Mat roi = image(_rect);
+             patches.push_back(roi);
+             Point2f _center = Point2f(_rect.x + _rect.width/2,
+                                       _rect.y + _rect.height/2);
+             // centroid.push_back(_center);
+             centroid.at<float>(y, 0) = _center.x;
+             centroid.at<float>(y++, 1) = _center.y;
+          }
+       }
+    }
+    
+    cv::flann::KDTreeIndexParams indexParams(5);
+    cv::flann::Index kdtree(centroid, indexParams);
+
+    Mat index;
+    Mat dist;
+    kdtree.knnSearch(centroid, index, dist, 4, cv::flann::SearchParams(64));
+
+    RAG rag;
+    rag.generateRAG(index, centroid);
+    rag.mergeRegionRAG(patches, centroid);
+    
+    
+    imshow("image", image);
+    waitKey(0);
+
+    return EXIT_SUCCESS;
+}

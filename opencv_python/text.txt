@@ -1,0 +1,3 @@
+/home/krishneel/Desktop/Program/opencv_python/image_1.jpg
+/home/krishneel/Desktop/Program/opencv_python/image_1.jpg
+/home/krishneel/Desktop/Program/opencv_python/image_1.jpg	
